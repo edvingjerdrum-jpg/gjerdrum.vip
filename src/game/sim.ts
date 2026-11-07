@@ -9,6 +9,7 @@ export const MOVE_SPEED = 7;
 export const BOT_SPEED = 3.2;
 export const BOT_COUNT = 6;
 export const RESPAWN = 3;
+export const HEADSHOT_Y = 1.5;
 
 export type WeaponId = "sill" | "makrill" | "kugelfisk" | "lax";
 export const WEAPONS: Record<WeaponId, { name: string; dmg: number; rate: number; speed: number; spread: number; pellets: number; color: string; size: number; key: string }> = {
@@ -17,6 +18,7 @@ export const WEAPONS: Record<WeaponId, { name: string; dmg: number; rate: number
   kugelfisk: { name: "Kugelfisk-hagel", dmg: 12, rate: 0.9, speed: 35, spread: 0.12, pellets: 7, color: "#e0b040", size: 0.5, key: "3" },
   lax: { name: "Lax-AWP", dmg: 100, rate: 1.4, speed: 90, spread: 0, pellets: 1, color: "#f08a6a", size: 1.1, key: "4" },
 };
+export const WEAPON_IDS = Object.keys(WEAPONS) as WeaponId[];
 
 export const BOXES: Box[] = (() => {
   const b: Box[] = [];
@@ -25,7 +27,6 @@ export const BOXES: Box[] = (() => {
   b.push({ x: 0, z: S, w: MAP_SIZE, d: 1, h: 6, kind: "wall" });
   b.push({ x: -S, z: 0, w: 1, d: MAP_SIZE, h: 6, kind: "wall" });
   b.push({ x: S, z: 0, w: 1, d: MAP_SIZE, h: 6, kind: "wall" });
-  // dust-like inner walls
   b.push({ x: -10, z: -8, w: 1.5, d: 22, h: 5, kind: "wall" });
   b.push({ x: 10, z: 8, w: 1.5, d: 22, h: 5, kind: "wall" });
   b.push({ x: 0, z: 18, w: 14, d: 1.5, h: 5, kind: "wall" });
@@ -41,24 +42,50 @@ export const BOXES: Box[] = (() => {
 })();
 
 export type Player = { pos: Vec; yaw: number; pitch: number; hp: number; weapon: WeaponId; cd: number; dead: number };
-export type Bot = { pos: Vec; yaw: number; hp: number; dead: number; target: Vec; cd: number; hit: number };
+export type Bot = { name: string; pos: Vec; yaw: number; hp: number; dead: number; target: Vec; cd: number; hit: number; kills: number; deaths: number };
+export type Remote = { id: string; name: string; pos: Vec; yaw: number; weapon: WeaponId; dead: boolean; kills: number; deaths: number; hit: number; seen: boolean };
+/** owner: -1 = local player, >=0 = bot index, -2 = remote player (visual only; their client decides hits). */
 export type Shot = { pos: Vec; vel: Vec; owner: number; dmg: number; kind: WeaponId; life: number; spin: number };
 export type Input = { fwd: number; right: number; fire: boolean };
+export type NetEvent =
+  | { type: "shot"; x: number; y: number; z: number; dx: number; dy: number; dz: number; kind: WeaponId }
+  | { type: "hit"; target: string; dmg: number; kind: WeaponId };
 
-export type Game = { player: Player; bots: Bot[]; shots: Shot[]; kills: number; deaths: number; time: number; feed: string[] };
+export type Game = {
+  mode: "solo" | "online";
+  name: string;
+  player: Player;
+  bots: Bot[];
+  remotes: Map<string, Remote>;
+  shots: Shot[];
+  kills: number;
+  deaths: number;
+  time: number;
+  feed: string[];
+  /** Outgoing network events, drained by the network layer. */
+  outbox: NetEvent[];
+  /** Who killed us last (remote id), drained by the network layer. */
+  killedBy: string | null;
+};
 
-const SPAWNS: [number, number][] = [[-25, -25], [25, 25], [-25, 25], [25, -25], [0, 10], [0, -10], [-15, 0], [15, 0]];
+export const SPAWNS: [number, number][] = [[-25, -25], [25, 25], [-25, 25], [25, -25], [0, 10], [0, -10], [-15, 0], [15, 0]];
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const randPoint = (): Vec => ({ x: rnd(-27, 27), y: 0, z: rnd(-27, 27) });
+const randSpawn = () => SPAWNS[Math.floor(Math.random() * SPAWNS.length)]!;
+const spawnYaw = (x: number, z: number) => Math.atan2(x, z); // face the map centre
 
-export function createGame(): Game {
+export function createGame(mode: "solo" | "online", name: string): Game {
+  const [sx, sz] = mode === "solo" ? SPAWNS[0]! : randSpawn();
   const g: Game = {
-    player: { pos: { x: -25, y: 0, z: -25 }, yaw: -Math.PI * 0.75, pitch: 0, hp: 100, weapon: "makrill", cd: 0, dead: 0 },
-    bots: [], shots: [], kills: 0, deaths: 0, time: 0, feed: [],
+    mode, name,
+    player: { pos: { x: sx, y: 0, z: sz }, yaw: spawnYaw(sx, sz), pitch: 0, hp: 100, weapon: "makrill", cd: 0, dead: 0 },
+    bots: [], remotes: new Map(), shots: [], kills: 0, deaths: 0, time: 0, feed: [], outbox: [], killedBy: null,
   };
-  for (let i = 0; i < BOT_COUNT; i++) {
-    const [x, z] = SPAWNS[(i + 1) % SPAWNS.length]!;
-    g.bots.push({ pos: { x, y: 0, z }, yaw: 0, hp: 100, dead: 0, target: randPoint(), cd: rnd(1, 2), hit: 0 });
+  if (mode === "solo") {
+    for (let i = 0; i < BOT_COUNT; i++) {
+      const [x, z] = SPAWNS[(i + 1) % SPAWNS.length]!;
+      g.bots.push({ name: `Bot ${i + 1}`, pos: { x, y: 0, z }, yaw: 0, hp: 100, dead: 0, target: randPoint(), cd: rnd(1, 2), hit: 0, kills: 0, deaths: 0 });
+    }
   }
   return g;
 }
@@ -93,17 +120,33 @@ export function aimDir(yaw: number, pitch: number): Vec {
   return { x: -Math.sin(yaw) * Math.cos(pitch), y: Math.sin(pitch), z: -Math.cos(yaw) * Math.cos(pitch) };
 }
 
+/** Damage for a fish hitting at height y (headshots double). */
+export function hitDamage(base: number, y: number) {
+  return y > HEADSHOT_Y ? base * 2 : base;
+}
+
+function spawnShot(g: Game, from: Vec, d: Vec, owner: number, kind: WeaponId) {
+  const w = WEAPONS[kind];
+  const l = Math.hypot(d.x, d.y, d.z) || 1;
+  g.shots.push({
+    pos: { x: from.x + (d.x / l) * 0.8, y: from.y + (d.y / l) * 0.8, z: from.z + (d.z / l) * 0.8 },
+    vel: { x: (d.x / l) * w.speed, y: (d.y / l) * w.speed, z: (d.z / l) * w.speed },
+    owner, dmg: w.dmg, kind, life: 2, spin: rnd(0, 6),
+  });
+}
+
 function fire(g: Game, from: Vec, dir: Vec, owner: number, kind: WeaponId) {
   const w = WEAPONS[kind];
   for (let i = 0; i < w.pellets; i++) {
     const d = { x: dir.x + rnd(-w.spread, w.spread), y: dir.y + rnd(-w.spread, w.spread), z: dir.z + rnd(-w.spread, w.spread) };
-    const l = Math.hypot(d.x, d.y, d.z);
-    g.shots.push({
-      pos: { x: from.x + (d.x / l) * 0.8, y: from.y + (d.y / l) * 0.8, z: from.z + (d.z / l) * 0.8 },
-      vel: { x: (d.x / l) * w.speed, y: (d.y / l) * w.speed, z: (d.z / l) * w.speed },
-      owner, dmg: w.dmg, kind, life: 2, spin: rnd(0, 6),
-    });
+    spawnShot(g, from, d, owner, kind);
+    if (owner === -1 && g.mode === "online") g.outbox.push({ type: "shot", x: from.x, y: from.y, z: from.z, dx: d.x, dy: d.y, dz: d.z, kind });
   }
+}
+
+/** A remote player's fish: drawn locally, but only their client decides what it hits. */
+export function addRemoteShot(g: Game, e: Extract<NetEvent, { type: "shot" }>) {
+  spawnShot(g, { x: e.x, y: e.y, z: e.z }, { x: e.dx, y: e.dy, z: e.dz }, -2, e.kind);
 }
 
 export function playerFire(g: Game) {
@@ -114,7 +157,24 @@ export function playerFire(g: Game) {
   return true;
 }
 
-const pushFeed = (g: Game, s: string) => { g.feed.unshift(s); g.feed.length = Math.min(g.feed.length, 5); };
+export const pushFeed = (g: Game, s: string) => { g.feed.unshift(s); g.feed.length = Math.min(g.feed.length, 5); };
+
+/** Apply damage to the local player. Returns true if it killed them. */
+export function damagePlayer(g: Game, dmg: number) {
+  const p = g.player;
+  if (p.dead > 0) return false;
+  p.hp -= dmg;
+  if (p.hp <= 0) { p.hp = 0; p.dead = RESPAWN; g.deaths++; return true; }
+  return false;
+}
+
+export type ScoreRow = { name: string; kills: number; deaths: number; me: boolean };
+export function scoreboard(g: Game): ScoreRow[] {
+  const rows: ScoreRow[] = [{ name: g.name, kills: g.kills, deaths: g.deaths, me: true }];
+  for (const b of g.bots) rows.push({ name: b.name, kills: b.kills, deaths: b.deaths, me: false });
+  for (const r of g.remotes.values()) rows.push({ name: r.name, kills: r.kills, deaths: r.deaths, me: false });
+  return rows.sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
+}
 
 export function step(g: Game, dt: number, input: Input) {
   g.time += dt;
@@ -123,8 +183,8 @@ export function step(g: Game, dt: number, input: Input) {
   if (p.dead > 0) {
     p.dead -= dt;
     if (p.dead <= 0) {
-      const [x, z] = SPAWNS[Math.floor(Math.random() * SPAWNS.length)]!;
-      p.pos = { x, y: 0, z }; p.hp = 100;
+      const [x, z] = randSpawn();
+      p.pos = { x, y: 0, z }; p.hp = 100; p.yaw = spawnYaw(x, z);
     }
   } else {
     const s = Math.sin(p.yaw), c = Math.cos(p.yaw);
@@ -136,12 +196,14 @@ export function step(g: Game, dt: number, input: Input) {
     if (input.fire) playerFire(g);
   }
 
+  for (const r of g.remotes.values()) r.hit = Math.max(0, r.hit - dt);
+
   g.bots.forEach((b, i) => {
     b.hit = Math.max(0, b.hit - dt);
     if (b.dead > 0) {
       b.dead -= dt;
       if (b.dead <= 0) {
-        const [x, z] = SPAWNS[Math.floor(Math.random() * SPAWNS.length)]!;
+        const [x, z] = randSpawn();
         b.pos = { x, y: 0, z }; b.hp = 100; b.target = randPoint();
       }
       return;
@@ -176,14 +238,30 @@ export function step(g: Game, dt: number, input: Input) {
       for (const b of g.bots) {
         if (b.dead > 0) continue;
         if (Math.hypot(s.pos.x - b.pos.x, s.pos.z - b.pos.z) < 0.6 && s.pos.y < 2.1) {
-          s.life = 0; b.hp -= s.pos.y > 1.5 ? s.dmg * 2 : s.dmg; b.hit = 0.15;
-          if (b.hp <= 0) { b.dead = RESPAWN; g.kills++; pushFeed(g, `Du 🐟 Bot ${g.bots.indexOf(b) + 1} (${WEAPONS[s.kind].name})`); }
+          s.life = 0; b.hp -= hitDamage(s.dmg, s.pos.y); b.hit = 0.15;
+          if (b.hp <= 0) { b.dead = RESPAWN; b.deaths++; g.kills++; pushFeed(g, `Du 🐟 ${b.name} (${WEAPONS[s.kind].name})`); }
           break;
         }
       }
-    } else if (p.dead <= 0 && Math.hypot(s.pos.x - p.pos.x, s.pos.z - p.pos.z) < 0.6 && s.pos.y < 1.9) {
-      s.life = 0; p.hp -= Math.round(s.dmg * 0.6);
-      if (p.hp <= 0) { p.hp = 0; p.dead = RESPAWN; g.deaths++; pushFeed(g, `Bot ${s.owner + 1} 🐟 Du (${WEAPONS[s.kind].name})`); }
+      if (s.life <= 0) continue;
+      for (const r of g.remotes.values()) {
+        if (r.dead || !r.seen) continue;
+        if (Math.hypot(s.pos.x - r.pos.x, s.pos.z - r.pos.z) < 0.6 && s.pos.y < 2.1) {
+          s.life = 0; r.hit = 0.15;
+          g.outbox.push({ type: "hit", target: r.id, dmg: hitDamage(s.dmg, s.pos.y), kind: s.kind });
+          break;
+        }
+      }
+    } else if (s.owner >= 0 && p.dead <= 0 && Math.hypot(s.pos.x - p.pos.x, s.pos.z - p.pos.z) < 0.6 && s.pos.y < 1.9) {
+      s.life = 0;
+      if (damagePlayer(g, Math.round(s.dmg * 0.6))) {
+        const bot = g.bots[s.owner]!;
+        bot.kills++;
+        pushFeed(g, `${bot.name} 🐟 Du (${WEAPONS[s.kind].name})`);
+      }
+    } else if (s.owner === -2) {
+      // remote fish: stop it visually when it reaches someone
+      if (p.dead <= 0 && Math.hypot(s.pos.x - p.pos.x, s.pos.z - p.pos.z) < 0.6 && s.pos.y < 1.9) s.life = 0;
     }
   }
   g.shots = g.shots.filter((s) => s.life > 0);
