@@ -110,7 +110,7 @@ function Bots({ game }: { game: G }) {
             <meshStandardMaterial attach="material-5" map={face} />
           </mesh>
           <group position={[0.45, 1.1, -0.4]} rotation={[0, 0, Math.PI / 2]}>
-            <Fish color={WEAPONS[(["sill", "makrill", "kugelfisk"] as WeaponId[])[i % 3]].color} size={0.7} />
+            <Fish color={WEAPONS[(["sill", "makrill", "kugelfisk"] as WeaponId[])[i % 3]!].color} size={0.7} />
           </group>
         </group>
       ))}
@@ -188,8 +188,8 @@ function Player({ game, weapon }: { game: G; weapon: WeaponId }) {
     const k = keys.current;
     const before = game.player.cd;
     step(game, dt, {
-      fwd: (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0),
-      right: (k.KeyD || k.ArrowRight ? 1 : 0) - (k.KeyA || k.ArrowLeft ? 1 : 0),
+      fwd: (k["KeyW"] || k["ArrowUp"] ? 1 : 0) - (k["KeyS"] || k["ArrowDown"] ? 1 : 0),
+      right: (k["KeyD"] || k["ArrowRight"] ? 1 : 0) - (k["KeyA"] || k["ArrowLeft"] ? 1 : 0),
       fire: fire.current,
     });
     if (game.player.cd > before) recoil.current = 1;

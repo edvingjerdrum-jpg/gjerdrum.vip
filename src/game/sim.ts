@@ -57,7 +57,7 @@ export function createGame(): Game {
     bots: [], shots: [], kills: 0, deaths: 0, time: 0, feed: [],
   };
   for (let i = 0; i < BOT_COUNT; i++) {
-    const [x, z] = SPAWNS[(i + 1) % SPAWNS.length];
+    const [x, z] = SPAWNS[(i + 1) % SPAWNS.length]!;
     g.bots.push({ pos: { x, y: 0, z }, yaw: 0, hp: 100, dead: 0, target: randPoint(), cd: rnd(1, 2), hit: 0 });
   }
   return g;
@@ -123,7 +123,7 @@ export function step(g: Game, dt: number, input: Input) {
   if (p.dead > 0) {
     p.dead -= dt;
     if (p.dead <= 0) {
-      const [x, z] = SPAWNS[Math.floor(Math.random() * SPAWNS.length)];
+      const [x, z] = SPAWNS[Math.floor(Math.random() * SPAWNS.length)]!;
       p.pos = { x, y: 0, z }; p.hp = 100;
     }
   } else {
@@ -141,7 +141,7 @@ export function step(g: Game, dt: number, input: Input) {
     if (b.dead > 0) {
       b.dead -= dt;
       if (b.dead <= 0) {
-        const [x, z] = SPAWNS[Math.floor(Math.random() * SPAWNS.length)];
+        const [x, z] = SPAWNS[Math.floor(Math.random() * SPAWNS.length)]!;
         b.pos = { x, y: 0, z }; b.hp = 100; b.target = randPoint();
       }
       return;
@@ -163,7 +163,7 @@ export function step(g: Game, dt: number, input: Input) {
       const from = { x: b.pos.x, y: 1.5, z: b.pos.z };
       const to = { x: p.pos.x - from.x, y: EYE - 0.3 - from.y, z: p.pos.z - from.z };
       const kinds: WeaponId[] = ["sill", "makrill", "kugelfisk"];
-      fire(g, from, to, i, kinds[i % 3]);
+      fire(g, from, to, i, kinds[i % 3]!);
     }
   });
 
