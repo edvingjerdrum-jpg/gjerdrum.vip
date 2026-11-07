@@ -66,6 +66,9 @@
   --color-hud-accent: oklch(0.82 0.16 80);
   --color-hud-panel: oklch(0.15 0.02 60 / 55%);
   --color-hud-danger: oklch(0.45 0.2 25 / 45%);
+  --color-hud-panel-strong: oklch(0.15 0.02 60 / 85%);
+  --color-hud-ink: oklch(0.18 0.03 60);
+  --color-menu: oklch(0.42 0.06 70);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
