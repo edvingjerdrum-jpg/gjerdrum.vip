@@ -53,7 +53,7 @@ const randPoint = (): Vec => ({ x: rnd(-27, 27), y: 0, z: rnd(-27, 27) });
 
 export function createGame(): Game {
   const g: Game = {
-    player: { pos: { x: -25, y: 0, z: -25 }, yaw: Math.PI * 0.75, pitch: 0, hp: 100, weapon: "makrill", cd: 0, dead: 0 },
+    player: { pos: { x: -25, y: 0, z: -25 }, yaw: -Math.PI * 0.75, pitch: 0, hp: 100, weapon: "makrill", cd: 0, dead: 0 },
     bots: [], shots: [], kills: 0, deaths: 0, time: 0, feed: [],
   };
   for (let i = 0; i < BOT_COUNT; i++) {
