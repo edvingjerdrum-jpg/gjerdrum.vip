@@ -10,13 +10,17 @@ export const BOT_SPEED = 3.2;
 export const BOT_COUNT = 6;
 export const RESPAWN = 3;
 export const HEADSHOT_Y = 1.5;
+export const SPRINT_MULT = 1.6;
+export const JUMP_SPEED = 6.5;
+export const GRAVITY = 18;
+export const STEP_UP = 0.3;
 
 export type WeaponId = "sill" | "makrill" | "kugelfisk" | "lax";
 export const WEAPONS: Record<WeaponId, { name: string; dmg: number; rate: number; speed: number; spread: number; pellets: number; color: string; size: number; key: string }> = {
-  sill: { name: "Sillpistol", dmg: 25, rate: 0.35, speed: 45, spread: 0.01, pellets: 1, color: "#b9c4cc", size: 0.6, key: "1" },
-  makrill: { name: "Makrill-AK", dmg: 14, rate: 0.1, speed: 55, spread: 0.035, pellets: 1, color: "#3f7d8c", size: 0.7, key: "2" },
-  kugelfisk: { name: "Kugelfisk-hagel", dmg: 12, rate: 0.9, speed: 35, spread: 0.12, pellets: 7, color: "#e0b040", size: 0.5, key: "3" },
-  lax: { name: "Lax-AWP", dmg: 100, rate: 1.4, speed: 90, spread: 0, pellets: 1, color: "#f08a6a", size: 1.1, key: "4" },
+  sill: { name: "Sildepistol", dmg: 25, rate: 0.35, speed: 45, spread: 0.01, pellets: 1, color: "#b9c4cc", size: 0.6, key: "1" },
+  makrill: { name: "Makrell-AK", dmg: 14, rate: 0.1, speed: 55, spread: 0.035, pellets: 1, color: "#3f7d8c", size: 0.7, key: "2" },
+  kugelfisk: { name: "Kulefisk-hagle", dmg: 12, rate: 0.9, speed: 35, spread: 0.12, pellets: 7, color: "#e0b040", size: 0.5, key: "3" },
+  lax: { name: "Laks-AWP", dmg: 100, rate: 1.4, speed: 90, spread: 0, pellets: 1, color: "#f08a6a", size: 1.1, key: "4" },
 };
 export const WEAPON_IDS = Object.keys(WEAPONS) as WeaponId[];
 
@@ -41,12 +45,12 @@ export const BOXES: Box[] = (() => {
   return b;
 })();
 
-export type Player = { pos: Vec; yaw: number; pitch: number; hp: number; weapon: WeaponId; cd: number; dead: number };
+export type Player = { pos: Vec; vy: number; yaw: number; pitch: number; hp: number; weapon: WeaponId; cd: number; dead: number };
 export type Bot = { name: string; pos: Vec; yaw: number; hp: number; dead: number; target: Vec; cd: number; hit: number; kills: number; deaths: number };
 export type Remote = { id: string; name: string; pos: Vec; yaw: number; weapon: WeaponId; dead: boolean; kills: number; deaths: number; hit: number; seen: boolean };
 /** owner: -1 = local player, >=0 = bot index, -2 = remote player (visual only; their client decides hits). */
 export type Shot = { pos: Vec; vel: Vec; owner: number; dmg: number; kind: WeaponId; life: number; spin: number };
-export type Input = { fwd: number; right: number; fire: boolean };
+export type Input = { fwd: number; right: number; fire: boolean; jump?: boolean; sprint?: boolean };
 export type NetEvent =
   | { type: "shot"; x: number; y: number; z: number; dx: number; dy: number; dz: number; kind: WeaponId }
   | { type: "hit"; target: string; dmg: number; kind: WeaponId };
@@ -78,7 +82,7 @@ export function createGame(mode: "solo" | "online", name: string): Game {
   const [sx, sz] = mode === "solo" ? SPAWNS[0]! : randSpawn();
   const g: Game = {
     mode, name,
-    player: { pos: { x: sx, y: 0, z: sz }, yaw: spawnYaw(sx, sz), pitch: 0, hp: 100, weapon: "makrill", cd: 0, dead: 0 },
+    player: { pos: { x: sx, y: 0, z: sz }, vy: 0, yaw: spawnYaw(sx, sz), pitch: 0, hp: 100, weapon: "makrill", cd: 0, dead: 0 },
     bots: [], remotes: new Map(), shots: [], kills: 0, deaths: 0, time: 0, feed: [], outbox: [], killedBy: null,
   };
   if (mode === "solo") {
@@ -92,6 +96,7 @@ export function createGame(mode: "solo" | "online", name: string): Game {
 
 export function collide(p: Vec, r: number) {
   for (const b of BOXES) {
+    if (p.y >= b.h - STEP_UP) continue; // standing on / above it
     const hx = b.w / 2 + r, hz = b.d / 2 + r;
     const dx = p.x - b.x, dz = p.z - b.z;
     if (Math.abs(dx) < hx && Math.abs(dz) < hz) {
@@ -100,6 +105,15 @@ export function collide(p: Vec, r: number) {
       else p.z += Math.sign(dz || 1) * oz;
     }
   }
+}
+
+/** Height of the surface under a circle at p (ground = 0, or a box top we're above). */
+export function groundAt(p: Vec, r: number) {
+  let h = 0;
+  for (const b of BOXES) {
+    if (Math.abs(p.x - b.x) < b.w / 2 + r * 0.5 && Math.abs(p.z - b.z) < b.d / 2 + r * 0.5 && p.y >= b.h - STEP_UP) h = Math.max(h, b.h);
+  }
+  return h;
 }
 
 function pointInBox(p: Vec) {
@@ -153,7 +167,7 @@ export function playerFire(g: Game) {
   const p = g.player;
   if (p.cd > 0 || p.dead > 0) return false;
   p.cd = WEAPONS[p.weapon].rate;
-  fire(g, { x: p.pos.x, y: EYE - 0.1, z: p.pos.z }, aimDir(p.yaw, p.pitch), -1, p.weapon);
+  fire(g, { x: p.pos.x, y: p.pos.y + EYE - 0.1, z: p.pos.z }, aimDir(p.yaw, p.pitch), -1, p.weapon);
   return true;
 }
 
@@ -184,15 +198,22 @@ export function step(g: Game, dt: number, input: Input) {
     p.dead -= dt;
     if (p.dead <= 0) {
       const [x, z] = randSpawn();
-      p.pos = { x, y: 0, z }; p.hp = 100; p.yaw = spawnYaw(x, z);
+      p.pos = { x, y: 0, z }; p.vy = 0; p.hp = 100; p.yaw = spawnYaw(x, z);
     }
   } else {
     const s = Math.sin(p.yaw), c = Math.cos(p.yaw);
     let mx = -s * input.fwd + c * input.right, mz = -c * input.fwd - s * input.right;
     const l = Math.hypot(mx, mz);
     if (l > 0) { mx /= l; mz /= l; }
-    p.pos.x += mx * MOVE_SPEED * dt; p.pos.z += mz * MOVE_SPEED * dt;
+    const speed = MOVE_SPEED * (input.sprint ? SPRINT_MULT : 1);
+    p.pos.x += mx * speed * dt; p.pos.z += mz * speed * dt;
     collide(p.pos, PLAYER_RADIUS);
+    const floor = groundAt(p.pos, PLAYER_RADIUS);
+    const onGround = p.pos.y <= floor + 0.001;
+    if (onGround && input.jump) p.vy = JUMP_SPEED;
+    p.vy -= GRAVITY * dt;
+    p.pos.y += p.vy * dt;
+    if (p.pos.y <= floor) { p.pos.y = floor; p.vy = 0; }
     if (input.fire) playerFire(g);
   }
 
@@ -223,7 +244,7 @@ export function step(g: Game, dt: number, input: Input) {
     if (sees && b.cd <= 0) {
       b.cd = rnd(0.9, 1.8);
       const from = { x: b.pos.x, y: 1.5, z: b.pos.z };
-      const to = { x: p.pos.x - from.x, y: EYE - 0.3 - from.y, z: p.pos.z - from.z };
+      const to = { x: p.pos.x - from.x, y: p.pos.y + EYE - 0.3 - from.y, z: p.pos.z - from.z };
       const kinds: WeaponId[] = ["sill", "makrill", "kugelfisk"];
       fire(g, from, to, i, kinds[i % 3]!);
     }
@@ -246,22 +267,22 @@ export function step(g: Game, dt: number, input: Input) {
       if (s.life <= 0) continue;
       for (const r of g.remotes.values()) {
         if (r.dead || !r.seen) continue;
-        if (Math.hypot(s.pos.x - r.pos.x, s.pos.z - r.pos.z) < 0.6 && s.pos.y < 2.1) {
+        if (Math.hypot(s.pos.x - r.pos.x, s.pos.z - r.pos.z) < 0.6 && s.pos.y > r.pos.y && s.pos.y - r.pos.y < 2.1) {
           s.life = 0; r.hit = 0.15;
-          g.outbox.push({ type: "hit", target: r.id, dmg: hitDamage(s.dmg, s.pos.y), kind: s.kind });
+          g.outbox.push({ type: "hit", target: r.id, dmg: hitDamage(s.dmg, s.pos.y - r.pos.y), kind: s.kind });
           break;
         }
       }
-    } else if (s.owner >= 0 && p.dead <= 0 && Math.hypot(s.pos.x - p.pos.x, s.pos.z - p.pos.z) < 0.6 && s.pos.y < 1.9) {
+    } else if (s.owner >= 0 && p.dead <= 0 && Math.hypot(s.pos.x - p.pos.x, s.pos.z - p.pos.z) < 0.6 && s.pos.y > p.pos.y && s.pos.y - p.pos.y < 1.9) {
       s.life = 0;
       if (damagePlayer(g, Math.round(s.dmg * 0.6))) {
         const bot = g.bots[s.owner]!;
         bot.kills++;
-        pushFeed(g, `${bot.name} 🐟 Du (${WEAPONS[s.kind].name})`);
+        pushFeed(g, `${bot.name} 🐟 deg (${WEAPONS[s.kind].name})`);
       }
     } else if (s.owner === -2) {
       // remote fish: stop it visually when it reaches someone
-      if (p.dead <= 0 && Math.hypot(s.pos.x - p.pos.x, s.pos.z - p.pos.z) < 0.6 && s.pos.y < 1.9) s.life = 0;
+      if (p.dead <= 0 && Math.hypot(s.pos.x - p.pos.x, s.pos.z - p.pos.z) < 0.6 && s.pos.y > p.pos.y && s.pos.y - p.pos.y < 1.9) s.life = 0;
     }
   }
   g.shots = g.shots.filter((s) => s.life > 0);
