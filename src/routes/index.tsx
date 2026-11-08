@@ -7,10 +7,10 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Fisk Strike – fånigt fiskskjutspel" },
-      { name: "description", content: "Ett fånigt Counter-Strike-liknande skjutspel där vapnen är fiskar. Spela mot bottar eller vänner." },
+      { title: "Fisk Strike – et tullete fiskeskytespill" },
+      { name: "description", content: "Et tullete Counter-Strike-aktig skytespill der våpnene er fisk. Spill mot boter eller venner." },
       { property: "og:title", content: "Fisk Strike" },
-      { property: "og:description", content: "Skjut fiskar på kloner i en ökenarena – ensam eller med vänner." },
+      { property: "og:description", content: "Skyt fisk på kloner i en ørkenarena – alene eller med venner." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

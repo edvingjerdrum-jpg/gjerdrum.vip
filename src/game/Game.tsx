@@ -132,7 +132,7 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
   const acc = useRef(0);
   const last = useRef({ key: "", at: -10 });
   const tmp = useMemo(() => new THREE.Vector3(), []);
-  const nameOf = (id: string) => (id === playerId ? "Du" : game.remotes.get(id)?.name ?? "Någon");
+  const nameOf = (id: string) => (id === playerId ? "Du" : game.remotes.get(id)?.name ?? "Noen");
 
   const channel = useGameChannel(room, game.name, {
     onRoster: (list) => {
@@ -158,7 +158,7 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
       if (h.target !== playerId || !game.remotes.has(h.from)) return;
       if (damagePlayer(game, h.dmg)) {
         game.killedBy = h.from;
-        pushFeed(game, `${nameOf(h.from)} 🐟 Du (${WEAPONS[h.kind].name})`);
+        pushFeed(game, `${nameOf(h.from)} 🐟 deg (${WEAPONS[h.kind].name})`);
         channel.current?.send({ type: "broadcast", event: "kill", payload: { killer: h.from, victim: playerId, kind: h.kind } });
       }
     },
@@ -420,7 +420,7 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
       </div>
       <div className="pointer-events-none absolute bottom-4 left-4 rounded bg-hud-panel px-4 py-2 font-mono text-3xl font-bold text-hud">✚ {hud.hp}</div>
       <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded bg-hud-panel px-4 py-1 font-mono text-lg text-hud">
-        Kills {hud.kills} · Död {hud.deaths}{mode === "online" && ` · Rum ${room} (${players}/${MAX_ROOM})`}
+        Drap {hud.kills} · Død {hud.deaths}{mode === "online" && ` · Rom ${room} (${players}/${MAX_ROOM})`}
       </div>
       <div className="pointer-events-none absolute bottom-4 right-4 space-y-1 rounded bg-hud-panel p-3 font-mono text-sm text-hud">
         {WEAPON_IDS.map((id) => (
@@ -430,19 +430,19 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
 
       {hud.dead > 0 && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-hud-danger">
-          <div className="font-mono text-5xl font-bold text-hud">Du blev fiskad! 🐟</div>
+          <div className="font-mono text-5xl font-bold text-hud">Du ble fisket! 🐟</div>
         </div>
       )}
 
       {showScores && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <div className="w-[min(520px,90vw)] rounded-lg bg-hud-panel-strong p-6 font-mono text-hud">
-            <h2 className="mb-4 text-center text-2xl font-bold">Poängtavla</h2>
+            <h2 className="mb-4 text-center text-2xl font-bold">Poengtavle</h2>
             <div className="grid grid-cols-[1fr_4rem_4rem] gap-y-1 text-sm">
-              <div className="opacity-60">Spelare</div><div className="text-right opacity-60">Kills</div><div className="text-right opacity-60">Död</div>
+              <div className="opacity-60">Spiller</div><div className="text-right opacity-60">Drap</div><div className="text-right opacity-60">Død</div>
               {rows.map((r, i) => (
                 <div key={i} className={`contents ${r.me ? "font-bold text-hud-accent" : ""}`}>
-                  <div className="truncate">{r.name}{r.me && " (du)"}</div>
+                  <div className="truncate">{r.name}{r.me && " (deg)"}</div>
                   <div className="text-right">{r.kills}</div>
                   <div className="text-right">{r.deaths}</div>
                 </div>
@@ -454,25 +454,25 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
 
       {!locked && hud.dead <= 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-hud-panel text-center font-mono text-hud">
-          <h1 className="text-5xl font-bold">{started ? "Paus" : "FISK STRIKE"}</h1>
+          <h1 className="text-5xl font-bold">{started ? "Pause" : "FISK STRIKE"}</h1>
           {mode === "online" && (
             <div className="mt-2 space-y-2">
-              <p className="text-sm opacity-80">Rumkod: <span className="text-hud-accent text-lg font-bold">{room}</span> · {players} spelare</p>
+              <p className="text-sm opacity-80">Romkode: <span className="text-hud-accent text-lg font-bold">{room}</span> · {players} spillere</p>
               <button
                 className="rounded border border-hud px-3 py-1 text-sm hover:bg-hud-panel"
                 onClick={() => { navigator.clipboard?.writeText(shareLink); setCopied(true); }}
               >
-                {copied ? "Länk kopierad!" : "Kopiera inbjudningslänk"}
+                {copied ? "Lenke kopiert!" : "Kopier invitasjonslenke"}
               </button>
             </div>
           )}
           <button className="mt-4 w-56 rounded bg-hud-accent px-6 py-3 text-lg font-bold text-hud-ink hover:opacity-90" onClick={lock}>
-            {started ? "Fortsätt" : "Spela"}
+            {started ? "Fortsett" : "Spill"}
           </button>
           <button className="w-56 rounded border border-hud px-6 py-2 hover:bg-hud-panel" onClick={onExit}>
-            Avsluta till menyn
+            Tilbake til menyen
           </button>
-          <p className="mt-4 text-sm opacity-80">WASD = gå · Mus = sikta · Klick = skjut · 1-4 = byt fisk · Tab = poäng · Esc = paus</p>
+          <p className="mt-4 text-sm opacity-80">WASD = gå · Mus = sikt · Klikk = skyt · Mellomrom = hopp · Ctrl/Shift = sprint · 1-4 = bytt fisk · Tab = poeng · Esc = pause</p>
         </div>
       )}
     </div>

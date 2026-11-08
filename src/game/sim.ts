@@ -17,10 +17,10 @@ export const STEP_UP = 0.3;
 
 export type WeaponId = "sill" | "makrill" | "kugelfisk" | "lax";
 export const WEAPONS: Record<WeaponId, { name: string; dmg: number; rate: number; speed: number; spread: number; pellets: number; color: string; size: number; key: string }> = {
-  sill: { name: "Sillpistol", dmg: 25, rate: 0.35, speed: 45, spread: 0.01, pellets: 1, color: "#b9c4cc", size: 0.6, key: "1" },
-  makrill: { name: "Makrill-AK", dmg: 14, rate: 0.1, speed: 55, spread: 0.035, pellets: 1, color: "#3f7d8c", size: 0.7, key: "2" },
-  kugelfisk: { name: "Kugelfisk-hagel", dmg: 12, rate: 0.9, speed: 35, spread: 0.12, pellets: 7, color: "#e0b040", size: 0.5, key: "3" },
-  lax: { name: "Lax-AWP", dmg: 100, rate: 1.4, speed: 90, spread: 0, pellets: 1, color: "#f08a6a", size: 1.1, key: "4" },
+  sill: { name: "Sildepistol", dmg: 25, rate: 0.35, speed: 45, spread: 0.01, pellets: 1, color: "#b9c4cc", size: 0.6, key: "1" },
+  makrill: { name: "Makrell-AK", dmg: 14, rate: 0.1, speed: 55, spread: 0.035, pellets: 1, color: "#3f7d8c", size: 0.7, key: "2" },
+  kugelfisk: { name: "Kulefisk-hagle", dmg: 12, rate: 0.9, speed: 35, spread: 0.12, pellets: 7, color: "#e0b040", size: 0.5, key: "3" },
+  lax: { name: "Laks-AWP", dmg: 100, rate: 1.4, speed: 90, spread: 0, pellets: 1, color: "#f08a6a", size: 1.1, key: "4" },
 };
 export const WEAPON_IDS = Object.keys(WEAPONS) as WeaponId[];
 
@@ -278,7 +278,7 @@ export function step(g: Game, dt: number, input: Input) {
       if (damagePlayer(g, Math.round(s.dmg * 0.6))) {
         const bot = g.bots[s.owner]!;
         bot.kills++;
-        pushFeed(g, `${bot.name} 🐟 Du (${WEAPONS[s.kind].name})`);
+        pushFeed(g, `${bot.name} 🐟 deg (${WEAPONS[s.kind].name})`);
       }
     } else if (s.owner === -2) {
       // remote fish: stop it visually when it reaches someone
