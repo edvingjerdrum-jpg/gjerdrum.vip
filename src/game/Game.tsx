@@ -6,6 +6,7 @@ import {
   BOXES, BOT_COUNT, EYE, MAP_SIZE, WEAPONS, WEAPON_IDS, addRemoteShot, createGame, damagePlayer, pushFeed, scoreboard, step,
   type Game as G, type WeaponId,
 } from "./sim";
+import { playOuches } from "./ouch";
 import { MAX_ROOM, netTick, playerId, useGameChannel } from "./net";
 
 const MAX_SHOTS = 160;
@@ -316,6 +317,7 @@ function Player({ game, weapon, paused }: { game: G; weapon: WeaponId; paused: R
       });
       if (game.player.cd > before) recoil.current = 1;
     }
+    playOuches(game, performance.now() / 1000);
     recoil.current *= Math.exp(-12 * dt);
     const p = game.player;
     camera.position.set(p.pos.x, p.pos.y + (p.dead > 0 ? 0.4 : EYE), p.pos.z);
