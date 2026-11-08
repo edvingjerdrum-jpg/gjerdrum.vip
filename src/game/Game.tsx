@@ -168,7 +168,7 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
     },
   });
 
-  useFrame(({ clock }, rawDelta) => {
+  useFrame((_, rawDelta) => {
     const dt = Math.min(rawDelta, 0.05);
     const t = 1 - Math.exp(-12 * dt);
     for (const [id, r] of game.remotes) {
@@ -192,10 +192,22 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
       }
     }
     game.outbox.length = 0;
+  });
 
-    acc.current += dt;
-    if (acc.current < netTick(game.remotes.size + 1) || !ch || document.hidden) return;
-    acc.current = 0;
+  // State sync runs on a timer, independent of frame rate.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const ch = channel.current;
+      const now = performance.now() / 1000;
+      if (!ch || document.hidden || now - acc.current < netTick(game.remotes.size + 1) - 0.01) return;
+      acc.current = now;
+      sendState(ch, now);
+    }, 50);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game]);
+
+  function sendState(ch: NonNullable<typeof channel.current>, now: number) {
     const p = game.player;
     const s = {
       id: playerId, name: game.name,
@@ -203,10 +215,10 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
       w: p.weapon, dead: p.dead > 0, k: game.kills, d: game.deaths,
     };
     const key = JSON.stringify(s);
-    if (key === last.current.key && clock.elapsedTime - last.current.at < 1) return;
-    last.current = { key, at: clock.elapsedTime };
+    if (key === last.current.key && now - last.current.at < 1) return;
+    last.current = { key, at: now };
     ch.send({ type: "broadcast", event: "state", payload: s });
-  });
+  }
 
   return (
     <>
