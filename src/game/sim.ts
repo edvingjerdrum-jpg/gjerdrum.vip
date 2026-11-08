@@ -70,6 +70,8 @@ export type Game = {
   outbox: NetEvent[];
   /** Who killed us last (remote id), drained by the network layer. */
   killedBy: string | null;
+  /** Where someone just got hit (drained by the audio layer to say "au"). */
+  ouches: Vec[];
 };
 
 export const SPAWNS: [number, number][] = [[-25, -25], [25, 25], [-25, 25], [25, -25], [0, 10], [0, -10], [-15, 0], [15, 0]];
@@ -83,7 +85,7 @@ export function createGame(mode: "solo" | "online", name: string): Game {
   const g: Game = {
     mode, name,
     player: { pos: { x: sx, y: 0, z: sz }, vy: 0, yaw: spawnYaw(sx, sz), pitch: 0, hp: 100, weapon: "makrill", cd: 0, dead: 0 },
-    bots: [], remotes: new Map(), shots: [], kills: 0, deaths: 0, time: 0, feed: [], outbox: [], killedBy: null,
+    bots: [], remotes: new Map(), shots: [], kills: 0, deaths: 0, time: 0, feed: [], outbox: [], killedBy: null, ouches: [],
   };
   if (mode === "solo") {
     for (let i = 0; i < BOT_COUNT; i++) {
@@ -178,6 +180,7 @@ export function damagePlayer(g: Game, dmg: number) {
   const p = g.player;
   if (p.dead > 0) return false;
   p.hp -= dmg;
+  g.ouches.push({ ...p.pos });
   if (p.hp <= 0) { p.hp = 0; p.dead = RESPAWN; g.deaths++; return true; }
   return false;
 }
@@ -259,7 +262,7 @@ export function step(g: Game, dt: number, input: Input) {
       for (const b of g.bots) {
         if (b.dead > 0) continue;
         if (Math.hypot(s.pos.x - b.pos.x, s.pos.z - b.pos.z) < 0.6 && s.pos.y < 2.1) {
-          s.life = 0; b.hp -= hitDamage(s.dmg, s.pos.y); b.hit = 0.15;
+          s.life = 0; b.hp -= hitDamage(s.dmg, s.pos.y); b.hit = 0.15; g.ouches.push({ ...b.pos });
           if (b.hp <= 0) { b.dead = RESPAWN; b.deaths++; g.kills++; pushFeed(g, `Du 🐟 ${b.name} (${WEAPONS[s.kind].name})`); }
           break;
         }
@@ -268,7 +271,7 @@ export function step(g: Game, dt: number, input: Input) {
       for (const r of g.remotes.values()) {
         if (r.dead || !r.seen) continue;
         if (Math.hypot(s.pos.x - r.pos.x, s.pos.z - r.pos.z) < 0.6 && s.pos.y > r.pos.y && s.pos.y - r.pos.y < 2.1) {
-          s.life = 0; r.hit = 0.15;
+          s.life = 0; r.hit = 0.15; g.ouches.push({ ...r.pos });
           g.outbox.push({ type: "hit", target: r.id, dmg: hitDamage(s.dmg, s.pos.y - r.pos.y), kind: s.kind });
           break;
         }
