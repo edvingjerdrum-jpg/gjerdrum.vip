@@ -6,7 +6,7 @@ import type { WeaponId } from "./sim";
 export const playerId = typeof crypto !== "undefined" ? crypto.randomUUID() : String(Math.random());
 export const MAX_ROOM = 8;
 
-export type NetState = { id: string; name: string; x: number; z: number; ry: number; w: WeaponId; dead: boolean; k: number; d: number };
+export type NetState = { id: string; name: string; x: number; y?: number; z: number; ry: number; w: WeaponId; dead: boolean; k: number; d: number };
 export type NetShot = { id: string; x: number; y: number; z: number; dx: number; dy: number; dz: number; kind: WeaponId };
 export type NetHit = { from: string; target: string; dmg: number; kind: WeaponId };
 export type NetKill = { killer: string; victim: string; kind: WeaponId };

@@ -150,7 +150,7 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
     onState: (s) => {
       const r = game.remotes.get(s.id);
       if (!r) return;
-      r.pos.x = s.x; r.pos.z = s.z; r.yaw = s.ry; r.dead = s.dead; r.kills = s.k; r.deaths = s.d; r.seen = true;
+      r.pos.x = s.x; r.pos.y = s.y ?? 0; r.pos.z = s.z; r.yaw = s.ry; r.dead = s.dead; r.kills = s.k; r.deaths = s.d; r.seen = true;
       if (r.weapon !== s.w) { r.weapon = s.w; setWeapons((w) => ({ ...w, [s.id]: s.w })); }
     },
     onShot: (s) => { if (game.remotes.has(s.id)) addRemoteShot(game, { type: "shot", ...s }); },
@@ -175,7 +175,7 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
       const a = refs.current.get(id);
       if (!a?.group) continue;
       a.group.visible = r.seen && !r.dead;
-      tmp.set(r.pos.x, 0, r.pos.z);
+      tmp.set(r.pos.x, r.pos.y, r.pos.z);
       if (a.group.position.distanceTo(tmp) > 5) a.group.position.copy(tmp);
       else a.group.position.lerp(tmp, t);
       const dy = r.yaw - a.group.rotation.y;
@@ -211,7 +211,7 @@ function Network({ game, room, onRoster }: { game: G; room: string; onRoster: (n
     const p = game.player;
     const s = {
       id: playerId, name: game.name,
-      x: Math.round(p.pos.x * 100) / 100, z: Math.round(p.pos.z * 100) / 100, ry: Math.round(p.yaw * 100) / 100,
+      x: Math.round(p.pos.x * 100) / 100, y: Math.round(p.pos.y * 100) / 100, z: Math.round(p.pos.z * 100) / 100, ry: Math.round(p.yaw * 100) / 100,
       w: p.weapon, dead: p.dead > 0, k: game.kills, d: game.deaths,
     };
     const key = JSON.stringify(s);
@@ -278,7 +278,10 @@ function Player({ game, weapon, paused }: { game: G; weapon: WeaponId; paused: R
 
   useEffect(() => {
     const el = gl.domElement;
-    const kd = (e: KeyboardEvent) => { keys.current[e.code] = true; };
+    const kd = (e: KeyboardEvent) => {
+      keys.current[e.code] = true;
+      if (e.code === "Space" || (e.ctrlKey && document.pointerLockElement)) e.preventDefault();
+    };
     const ku = (e: KeyboardEvent) => { keys.current[e.code] = false; };
     const mm = (e: MouseEvent) => {
       if (document.pointerLockElement !== el) return;
@@ -308,12 +311,14 @@ function Player({ game, weapon, paused }: { game: G; weapon: WeaponId; paused: R
         fwd: isPaused ? 0 : (k["KeyW"] || k["ArrowUp"] ? 1 : 0) - (k["KeyS"] || k["ArrowDown"] ? 1 : 0),
         right: isPaused ? 0 : (k["KeyD"] || k["ArrowRight"] ? 1 : 0) - (k["KeyA"] || k["ArrowLeft"] ? 1 : 0),
         fire: !isPaused && fire.current,
+        jump: !isPaused && !!k["Space"],
+        sprint: !isPaused && !!(k["ControlLeft"] || k["ControlRight"] || k["ShiftLeft"] || k["ShiftRight"]),
       });
       if (game.player.cd > before) recoil.current = 1;
     }
     recoil.current *= Math.exp(-12 * dt);
     const p = game.player;
-    camera.position.set(p.pos.x, p.dead > 0 ? 0.4 : EYE, p.pos.z);
+    camera.position.set(p.pos.x, p.pos.y + (p.dead > 0 ? 0.4 : EYE), p.pos.z);
     camera.rotation.set(p.pitch, p.yaw, p.dead > 0 ? 0.6 : 0, "YXZ");
     if (held.current) {
       held.current.position.set(0.35, -0.3 + Math.sin(game.time * 6) * 0.01, -0.7 + recoil.current * 0.15);
