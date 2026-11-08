@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Game rules live in `src/game/sim.ts` (no React/three); scene in `Game.tsx` only draws state. Why: physics can't be watched in the sandbox, so rules must stay testable.
+- Multiplayer is client-authoritative over Cloud realtime broadcast (`src/game/net.ts`), shooter decides hits, state on a timer ≤8 Hz. Why: no game server; message budget scales N²×tick.

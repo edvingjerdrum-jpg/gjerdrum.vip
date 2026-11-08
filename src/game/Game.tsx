@@ -430,7 +430,7 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
       )}
 
       {showScores && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <div className="w-[min(520px,90vw)] rounded-lg bg-hud-panel-strong p-6 font-mono text-hud">
             <h2 className="mb-4 text-center text-2xl font-bold">Poängtavla</h2>
             <div className="grid grid-cols-[1fr_4rem_4rem] gap-y-1 text-sm">
