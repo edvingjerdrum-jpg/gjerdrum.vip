@@ -68,7 +68,7 @@
   --color-hud-danger: oklch(0.45 0.2 25 / 45%);
   --color-hud-panel-strong: oklch(0.15 0.02 60 / 85%);
   --color-hud-ink: oklch(0.18 0.03 60);
-  --color-menu: oklch(0.42 0.06 70);
+  --color-menu: oklch(0.28 0.035 195);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -80,6 +80,16 @@
 }
 
 :root {
+  --rig-steel: oklch(0.47 0.025 215);
+  --rig-deck: oklch(0.57 0.025 190);
+  --rig-dark: oklch(0.25 0.018 210);
+  --rig-yellow: oklch(0.83 0.17 90);
+  --rig-red: oklch(0.55 0.18 28);
+  --rig-pale: oklch(0.85 0.018 180);
+  --rig-ocean: oklch(0.48 0.08 210);
+  --rig-sky: oklch(0.86 0.035 215);
+  --rig-light: oklch(0.98 0.015 95);
+  --rig-foam: oklch(0.78 0.035 200);
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);

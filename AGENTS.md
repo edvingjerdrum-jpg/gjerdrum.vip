@@ -32,3 +32,4 @@ use the editor.
 - Game rules live in `src/game/sim.ts` (no React/three); scene in `Game.tsx` only draws state. Why: physics can't be watched in the sandbox, so rules must stay testable.
 - Multiplayer is client-authoritative over Cloud realtime broadcast (`src/game/net.ts`), shooter decides hits, state on a timer ≤8 Hz. Why: no game server; message budget scales N²×tick.
 - GitHub Pages uses the existing TanStack Start SPA build behind GITHUB_PAGES=true; deploy only dist/client through Actions. Why: static hosting cannot run the Worker, while Lovable must retain its normal build.
+- Oil-rig scenery lives in `src/game/OilRig.tsx` and draws the collision boxes from the simulation; scenery colors come from CSS tokens. Why: map presentation can change without changing combat or duplicating collision geometry.
