@@ -10,7 +10,7 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // GitHub Pages serves only the browser build; Lovable keeps its normal Worker build.
-const githubPages = process.env.GITHUB_PAGES === "true";
+const githubPages = process.env['GITHUB_PAGES'] === "true";
 
 export default defineConfig({
   ...(githubPages ? { nitro: false as const } : {}),
