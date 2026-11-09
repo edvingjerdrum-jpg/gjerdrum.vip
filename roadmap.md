@@ -1,0 +1,3 @@
+- [x] Add a static GitHub Pages build without changing gameplay.
+- [ ] Enable and run GitHub Pages deployment for the existing repository.
+- [ ] Verify the published start menu and a solo match.
