@@ -1,3 +1,3 @@
 - [x] Add a static GitHub Pages build without changing gameplay.
-- [ ] Enable and run GitHub Pages deployment for the existing repository.
-- [ ] Verify the published start menu and a solo match.
+- [x] Enable and run GitHub Pages deployment for the existing repository.
+- [x] Verify the published start menu and solo arena on gjerdrum.vip (browser reports a recoverable hydration warning; multiplayer combat not verified).
