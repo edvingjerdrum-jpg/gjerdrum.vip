@@ -1,0 +1,44 @@
+name: Publish Fisk Strike to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/configure-pages@v5
+      - run: bun install --frozen-lockfile
+      - name: Build static game
+        run: bun run build
+        env:
+          GITHUB_PAGES: "true"
+      - name: Prepare Pages files
+        run: |
+          test -f dist/client/index.html
+          cp CNAME dist/client/CNAME
+          cp dist/client/index.html dist/client/404.html
+          touch dist/client/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/client
+      - uses: actions/deploy-pages@v4
+        id: deployment
