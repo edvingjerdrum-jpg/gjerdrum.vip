@@ -1,5 +1,5 @@
 - [x] Add a static GitHub Pages build without changing gameplay.
 - [x] Enable and run GitHub Pages deployment for the existing repository.
 - [x] Verify the published start menu and a solo match.
-- [ ] Add Norwegian match commentary with shared voice playback.
-- [ ] Make Shift the only sprint key and verify both changes.
+- [x] Add Norwegian match commentary with shared voice playback.
+- [x] Make Shift the only sprint key and verify both changes (four tests and browser speech-call checks; audible voice quality not verified).
