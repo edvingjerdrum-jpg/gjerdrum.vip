@@ -3,25 +3,15 @@ import { Environment, Lightformer } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import {
-  BOXES, BOT_COUNT, EYE, MAP_SIZE, WEAPONS, WEAPON_IDS, addRemoteShot, createGame, damagePlayer, pushFeed, scoreboard, step,
+  BOT_COUNT, EYE, WEAPONS, WEAPON_IDS, addRemoteShot, createGame, damagePlayer, pushFeed, scoreboard, step,
   type Game as G, type WeaponId,
 } from "./sim";
 import { playOuches } from "./ouch";
 import { MAX_ROOM, netTick, playerId, useGameChannel } from "./net";
+import OilRig, { useRigPalette } from "./OilRig";
 
 const MAX_SHOTS = 160;
 const BOT_WEAPONS: WeaponId[] = ["sill", "makrill", "kugelfisk"];
-
-function makeTex(draw: (c: CanvasRenderingContext2D) => void, repeat: number) {
-  const cv = document.createElement("canvas");
-  cv.width = cv.height = 128;
-  draw(cv.getContext("2d")!);
-  const t = new THREE.CanvasTexture(cv);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(repeat, repeat);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
 
 function Fish({ color, size = 1 }: { color: string; size?: number }) {
   return (
@@ -37,40 +27,6 @@ function Fish({ color, size = 1 }: { color: string; size?: number }) {
       <mesh position={[0.12, 0.08, -0.4]}><sphereGeometry args={[0.05, 8, 8]} /><meshStandardMaterial color="#111" /></mesh>
       <mesh position={[-0.12, 0.08, -0.4]}><sphereGeometry args={[0.05, 8, 8]} /><meshStandardMaterial color="#111" /></mesh>
     </group>
-  );
-}
-
-function Level() {
-  const [sand, wall, crate] = useMemo(
-    () => [
-      makeTex((c) => {
-        c.fillStyle = "#c9a86a"; c.fillRect(0, 0, 128, 128);
-        for (let i = 0; i < 600; i++) { c.fillStyle = `rgba(${90 + Math.random() * 60},70,30,0.15)`; c.fillRect(Math.random() * 128, Math.random() * 128, 2, 2); }
-      }, 20),
-      makeTex((c) => {
-        c.fillStyle = "#d8c08a"; c.fillRect(0, 0, 128, 128); c.strokeStyle = "#a88a55"; c.lineWidth = 2;
-        for (let y = 0; y < 128; y += 32) { c.strokeRect(0, y, 128, 32); c.beginPath(); c.moveTo(64, y); c.lineTo(64, y + 32); c.stroke(); }
-      }, 1),
-      makeTex((c) => {
-        c.fillStyle = "#8a5a2b"; c.fillRect(0, 0, 128, 128); c.strokeStyle = "#5b3a18"; c.lineWidth = 8;
-        c.strokeRect(4, 4, 120, 120); c.beginPath(); c.moveTo(0, 0); c.lineTo(128, 128); c.stroke();
-      }, 1),
-    ],
-    [],
-  );
-  return (
-    <>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[MAP_SIZE, MAP_SIZE]} />
-        <meshStandardMaterial map={sand} />
-      </mesh>
-      {BOXES.map((b, i) => (
-        <mesh key={i} position={[b.x, b.h / 2, b.z]} castShadow receiveShadow>
-          <boxGeometry args={[b.w, b.h, b.d]} />
-          <meshStandardMaterial map={b.kind === "crate" ? crate : wall} />
-        </mesh>
-      ))}
-    </>
   );
 }
 
@@ -346,6 +302,17 @@ function Ready() {
   return null;
 }
 
+function RigEnvironment() {
+  const p = useRigPalette();
+  return <>
+    <color attach="background" args={[p.sky]} />
+    <fog attach="fog" args={[p.sky, 90, 500]} />
+    <hemisphereLight args={[p.light, p.ocean, 1.3]} />
+    <directionalLight position={[20, 35, -10]} intensity={2.2} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-35} shadow-camera-right={35} shadow-camera-top={35} shadow-camera-bottom={-35} />
+    <Environment><Lightformer intensity={2} position={[0, 5, 0]} scale={[10, 10, 1]} /><Lightformer intensity={1} color={p.light} position={[-5, 1, -1]} rotation-y={Math.PI / 2} scale={[20, 1, 1]} /></Environment>
+  </>;
+}
+
 export type GameProps = { mode: "solo" | "online"; name: string; room: string | null; onExit: () => void };
 
 export default function FishGame({ mode, name, room, onExit }: GameProps) {
@@ -397,17 +364,9 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
 
   return (
     <div ref={wrap} className="relative h-screen w-screen overflow-hidden bg-background select-none">
-      <Canvas shadows camera={{ fov: 75, near: 0.05, far: 200 }}>
-        <color attach="background" args={["#9cc7e6"]} />
-        <fog attach="fog" args={["#d8c9a8", 30, 90]} />
-        <hemisphereLight args={["#fff4dd", "#a07a48", 0.7]} />
-        <directionalLight position={[20, 30, 10]} intensity={2.2} castShadow shadow-mapSize={[2048, 2048]}
-          shadow-camera-left={-35} shadow-camera-right={35} shadow-camera-top={35} shadow-camera-bottom={-35} />
-        <Environment>
-          <Lightformer intensity={2} position={[0, 5, 0]} scale={[10, 10, 1]} />
-          <Lightformer intensity={1} color="#ffd9a0" position={[-5, 1, -1]} rotation-y={Math.PI / 2} scale={[20, 1, 1]} />
-        </Environment>
-        <Level />
+      <Canvas shadows camera={{ fov: 75, near: 0.05, far: 1800 }}>
+        <RigEnvironment />
+        <OilRig />
         <Bots game={game} />
         {mode === "online" && room && <Network game={game} room={room} onRoster={setPlayers} />}
         <Shots game={game} />
@@ -456,7 +415,7 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
 
       {!locked && hud.dead <= 0 && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-hud-panel text-center font-mono text-hud">
-          <h1 className="text-5xl font-bold">{started ? "Pause" : "FISK STRIKE"}</h1>
+          <h1 className="max-w-full px-4 text-3xl font-bold sm:text-5xl">{started ? "Pause" : "Norge Simulator 2026"}</h1>
           {mode === "online" && (
             <div className="mt-2 space-y-2">
               <p className="text-sm opacity-80">Romkode: <span className="text-hud-accent text-lg font-bold">{room}</span> · {players} spillere</p>
