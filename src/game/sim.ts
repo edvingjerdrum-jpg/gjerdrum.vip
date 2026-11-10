@@ -290,3 +290,11 @@ export function step(g: Game, dt: number, input: Input) {
   }
   g.shots = g.shots.filter((s) => s.life > 0);
 }
+
+export const MATCH_LENGTH = 180;
+export const matchLeft = (g: Game) => Math.max(0, MATCH_LENGTH - g.time);
+export const kd = (r: { kills: number; deaths: number }) => r.kills / Math.max(1, r.deaths);
+/** Highest K/D wins; ties go to more kills. */
+export function matchWinner(rows: ScoreRow[]): ScoreRow | null {
+  return [...rows].sort((a, b) => kd(b) - kd(a) || b.kills - a.kills)[0] ?? null;
+}
