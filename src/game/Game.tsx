@@ -9,6 +9,9 @@ import {
 import { playOuches } from "./ouch";
 import { MAX_ROOM, netTick, playerId, useGameChannel } from "./net";
 import OilRig, { useRigPalette } from "./OilRig";
+import { sprintHeld } from "./controls";
+import { createCommentary, playCommentary } from "./commentator";
+import { stopGameVoice } from "./voice";
 
 const MAX_SHOTS = 160;
 const BOT_WEAPONS: WeaponId[] = ["sill", "makrill", "kugelfisk"];
@@ -232,12 +235,15 @@ function Player({ game, weapon, paused }: { game: G; weapon: WeaponId; paused: R
   const fire = useRef(false);
   const held = useRef<THREE.Group>(null);
   const recoil = useRef(0);
+  const commentary = useMemo(createCommentary, [game]);
+
+  useEffect(() => stopGameVoice, []);
 
   useEffect(() => {
     const el = gl.domElement;
     const kd = (e: KeyboardEvent) => {
       keys.current[e.code] = true;
-      if (e.code === "Space" || (e.ctrlKey && document.pointerLockElement)) e.preventDefault();
+      if (e.code === "Space") e.preventDefault();
     };
     const ku = (e: KeyboardEvent) => { keys.current[e.code] = false; };
     const mm = (e: MouseEvent) => {
@@ -269,11 +275,13 @@ function Player({ game, weapon, paused }: { game: G; weapon: WeaponId; paused: R
         right: isPaused ? 0 : (k["KeyD"] || k["ArrowRight"] ? 1 : 0) - (k["KeyA"] || k["ArrowLeft"] ? 1 : 0),
         fire: !isPaused && fire.current,
         jump: !isPaused && !!k["Space"],
-        sprint: !isPaused && !!(k["ControlLeft"] || k["ControlRight"] || k["ShiftLeft"] || k["ShiftRight"]),
+        sprint: !isPaused && sprintHeld(k),
       });
       if (game.player.cd > before) recoil.current = 1;
     }
-    playOuches(game, performance.now() / 1000);
+    const now = performance.now() / 1000;
+    if (!isPaused) playCommentary(commentary, game, now);
+    playOuches(game, now);
     recoil.current *= Math.exp(-12 * dt);
     const p = game.player;
     camera.position.set(p.pos.x, p.pos.y + (p.dead > 0 ? 0.4 : EYE), p.pos.z);
@@ -345,6 +353,7 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
       const l = !!document.pointerLockElement;
       setLocked(l);
       paused.current = !l;
+      if (!l) stopGameVoice();
       if (l) setStarted(true);
     };
     window.addEventListener("keydown", kd);
@@ -433,7 +442,7 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
           <button className="w-56 rounded border border-hud px-6 py-2 hover:bg-hud-panel" onClick={onExit}>
             Tilbake til menyen
           </button>
-          <p className="mt-4 text-sm opacity-80">WASD = gå · Mus = sikt · Klikk = skyt · Mellomrom = hopp · Ctrl/Shift = sprint · 1-4 = bytt fisk · Tab = poeng · Esc = pause</p>
+          <p className="mt-4 text-sm opacity-80">WASD = gå · Mus = sikt · Klikk = skyt · Mellomrom = hopp · Shift = sprint · 1-4 = bytt fisk · Tab = poeng · Esc = pause</p>
         </div>
       )}
     </div>
