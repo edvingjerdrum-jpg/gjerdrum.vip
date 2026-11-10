@@ -3,7 +3,7 @@ import { Environment, Lightformer } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import {
-  BOT_COUNT, EYE, WEAPONS, WEAPON_IDS, addRemoteShot, createGame, damagePlayer, pushFeed, scoreboard, step,
+  BOT_COUNT, EYE, WEAPONS, WEAPON_IDS, addRemoteShot, createGame, damagePlayer, pushFeed, scoreboard, step, matchLeft, matchWinner, kd,
   type Game as G, type WeaponId,
 } from "./sim";
 import { playOuches } from "./ouch";
@@ -268,7 +268,7 @@ function Player({ game, weapon, paused }: { game: G; weapon: WeaponId; paused: R
     const k = keys.current;
     const isPaused = paused.current;
     // Solo freezes on pause; online keeps running (you just stand still).
-    if (!isPaused || game.mode === "online") {
+    if (matchLeft(game) > 0 && (!isPaused || game.mode === "online")) {
       const before = game.player.cd;
       step(game, dt, {
         fwd: isPaused ? 0 : (k["KeyW"] || k["ArrowUp"] ? 1 : 0) - (k["KeyS"] || k["ArrowDown"] ? 1 : 0),
@@ -326,7 +326,8 @@ export type GameProps = { mode: "solo" | "online"; name: string; room: string | 
 export default function FishGame({ mode, name, room, onExit }: GameProps) {
   const game = useMemo(() => createGame(mode, name), [mode, name]);
   const [weapon, setWeapon] = useState<WeaponId>(game.player.weapon);
-  const [hud, setHud] = useState({ hp: 100, kills: 0, deaths: 0, feed: [] as string[], dead: 0 });
+  const [hud, setHud] = useState({ hp: 100, kills: 0, deaths: 0, feed: [] as string[], dead: 0, left: 180 });
+  const [prize, setPrize] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
   const [started, setStarted] = useState(false);
   const [showScores, setShowScores] = useState(false);
@@ -341,7 +342,7 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
     if (import.meta.env.DEV) (window as unknown as { __game: G }).__game = game;
     const id = setInterval(() => {
       const p = game.player;
-      setHud({ hp: p.hp, kills: game.kills, deaths: game.deaths, feed: [...game.feed], dead: p.dead });
+      setHud({ hp: p.hp, kills: game.kills, deaths: game.deaths, feed: [...game.feed], dead: p.dead, left: matchLeft(game) });
     }, 100);
     const kd = (e: KeyboardEvent) => {
       if (e.key === "Tab") { e.preventDefault(); setShowScores(true); return; }
@@ -369,7 +370,24 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
   }, [game]);
 
   const shareLink = room && typeof window !== "undefined" ? `${window.location.origin}/?room=${room}` : "";
-  const rows = showScores ? scoreboard(game) : [];
+  const over = hud.left <= 0;
+  const rows = showScores || over ? scoreboard(game) : [];
+  const champ = over ? matchWinner(rows) : null;
+  const iWon = !!champ?.me;
+  useEffect(() => {
+    if (!over) return;
+    if (document.pointerLockElement) document.exitPointerLock();
+    if (!iWon) return;
+    const base = "https://raw.githubusercontent.com/edvingjerdrum-jpg/edvingjerdrum-jpg.github.io";
+    (async () => {
+      for (const b of ["main", "master"]) {
+        const r = await fetch(`${base}/${b}/vinst.txt`, { cache: "no-store" }).catch(() => null);
+        if (r?.ok) { setPrize(await r.text()); return; }
+      }
+      setPrize("Fant ikke vinst.txt ennå.");
+    })();
+  }, [over, iWon]);
+  const clock = `${Math.floor(hud.left / 60)}:${String(Math.ceil(hud.left % 60) === 60 ? 0 : Math.floor(hud.left % 60)).padStart(2, "0")}`;
 
   return (
     <div ref={wrap} className="relative h-screen w-screen overflow-hidden bg-background select-none">
@@ -390,7 +408,7 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
       </div>
       <div className="pointer-events-none absolute bottom-4 left-4 rounded bg-hud-panel px-4 py-2 font-mono text-3xl font-bold text-hud">✚ {hud.hp}</div>
       <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded bg-hud-panel px-4 py-1 font-mono text-lg text-hud">
-        Drap {hud.kills} · Død {hud.deaths}{mode === "online" && ` · Rom ${room} (${players}/${MAX_ROOM})`}
+        ⏱ {clock} · Drap {hud.kills} · Død {hud.deaths}{mode === "online" && ` · Rom ${room} (${players}/${MAX_ROOM})`}
       </div>
       <div className="pointer-events-none absolute bottom-4 right-4 space-y-1 rounded bg-hud-panel p-3 font-mono text-sm text-hud">
         {WEAPON_IDS.map((id) => (
@@ -422,7 +440,21 @@ export default function FishGame({ mode, name, room, onExit }: GameProps) {
         </div>
       )}
 
-      {!locked && hud.dead <= 0 && (
+      {over && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-hud-panel-strong p-4 text-center font-mono text-hud">
+          <h1 className="text-4xl font-bold">Kampen er over!</h1>
+          <p className="text-xl">Vinner: <span className="font-bold text-hud-accent">{champ?.name}</span> (K/D {champ ? kd(champ).toFixed(2) : "0"})</p>
+          {iWon ? (
+            <div className="w-[min(560px,90vw)] space-y-2">
+              <p className="text-lg font-bold">Du vant! Her er premien din 🏆</p>
+              <pre className="max-h-[40vh] overflow-auto whitespace-pre-wrap rounded border border-hud p-4 text-left text-sm">{prize ?? "Henter vinst.txt…"}</pre>
+            </div>
+          ) : <p className="opacity-80">Bare vinneren får se vinst.txt.</p>}
+          <button className="w-56 rounded bg-hud-accent px-6 py-3 text-lg font-bold text-hud-ink hover:opacity-90" onClick={onExit}>Tilbake til menyen</button>
+        </div>
+      )}
+
+      {!locked && hud.dead <= 0 && !over && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-hud-panel text-center font-mono text-hud">
           <h1 className="max-w-full px-4 text-3xl font-bold sm:text-5xl">{started ? "Pause" : "Norge Simulator 2026"}</h1>
           {mode === "online" && (
