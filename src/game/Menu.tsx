@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { randomRoom } from "./net";
 
 export type Choice = { mode: "solo" | "online"; name: string; room: string | null };
@@ -13,8 +14,7 @@ export default function Menu({ initialRoom, onStart }: { initialRoom: string | n
     <div className="flex min-h-screen items-center justify-center bg-menu p-4 font-mono text-hud">
       <div className="w-full max-w-md space-y-6 rounded-xl bg-hud-panel-strong p-8 text-center">
         <div>
-          <h1 className="text-5xl font-bold tracking-tight">FISK STRIKE</h1>
-          <p className="mt-2 text-sm opacity-80">Counter-Strike, men med fisk 🐟</p>
+          <h1 className="text-3xl font-bold leading-tight sm:text-4xl">Norge Simulator 2026</h1>
         </div>
         <input
           className="w-full rounded border border-hud bg-transparent px-3 py-2 text-center outline-none focus:border-hud-accent"
@@ -23,16 +23,16 @@ export default function Menu({ initialRoom, onStart }: { initialRoom: string | n
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <button className="w-full rounded bg-hud-accent px-6 py-3 text-lg font-bold text-hud-ink hover:opacity-90"
+        <Button className="h-auto w-full rounded bg-hud-accent px-6 py-3 text-lg font-bold text-hud-ink hover:bg-hud-accent hover:opacity-90"
           onClick={() => go({ mode: "solo", name: n, room: null })}>
           Spill mot boter
-        </button>
+        </Button>
         <div className="space-y-2 border-t border-hud pt-6">
           <p className="text-sm opacity-80">Flerspiller (opptil 8 spillere)</p>
-          <button className="w-full rounded border border-hud px-6 py-2 hover:bg-hud-panel"
+          <Button variant="ghost" className="h-auto w-full rounded border border-hud px-6 py-2 hover:bg-hud-panel hover:text-hud"
             onClick={() => go({ mode: "online", name: n, room: randomRoom() })}>
             Lag nytt rom
-          </button>
+          </Button>
           <div className="flex gap-2">
             <input
               className="min-w-0 flex-1 rounded border border-hud bg-transparent px-3 py-2 text-center uppercase outline-none focus:border-hud-accent"
@@ -41,10 +41,10 @@ export default function Menu({ initialRoom, onStart }: { initialRoom: string | n
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
             />
-            <button className="rounded border border-hud px-4 py-2 hover:bg-hud-panel disabled:opacity-40" disabled={code.length < 3}
+            <Button variant="ghost" className="h-auto rounded border border-hud px-4 py-2 hover:bg-hud-panel hover:text-hud disabled:opacity-40" disabled={code.length < 3}
               onClick={() => go({ mode: "online", name: n, room: code })}>
               Bli med
-            </button>
+            </Button>
           </div>
         </div>
       </div>

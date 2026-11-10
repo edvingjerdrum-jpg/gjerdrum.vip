@@ -7,10 +7,10 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Fisk Strike – et tullete fiskeskytespill" },
-      { name: "description", content: "Et tullete Counter-Strike-aktig skytespill der våpnene er fisk. Spill mot boter eller venner." },
-      { property: "og:title", content: "Fisk Strike" },
-      { property: "og:description", content: "Skyt fisk på kloner i en ørkenarena – alene eller med venner." },
+      { title: "Norge Simulator 2026" },
+      { name: "description", content: "Fiskeskyting på en norsk oljerigg. Spill mot boter eller venner i Norge Simulator 2026." },
+      { property: "og:title", content: "Norge Simulator 2026" },
+      { property: "og:description", content: "Skyt fisk på en oljerigg ute på havet – alene eller med venner." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
