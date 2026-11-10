@@ -33,3 +33,4 @@ use the editor.
 - Multiplayer is client-authoritative over Cloud realtime broadcast (`src/game/net.ts`), shooter decides hits, state on a timer ≤8 Hz. Why: no game server; message budget scales N²×tick.
 - GitHub Pages uses the existing TanStack Start SPA build behind GITHUB_PAGES=true; deploy only dist/client through Actions. Why: static hosting cannot run the Worker, while Lovable must retain its normal build.
 - Oil-rig scenery lives in `src/game/OilRig.tsx` and draws the collision boxes from the simulation; scenery colors come from CSS tokens. Why: map presentation can change without changing combat or duplicating collision geometry.
+- Match commentary observes simulation score/health transitions in a separate pure detector and shares browser speech playback with pain cries. Why: commentary stays testable, static-host compatible and cannot be interrupted by every hit.
