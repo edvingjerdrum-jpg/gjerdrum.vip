@@ -1,6 +1,6 @@
 - [x] Add a static GitHub Pages build without changing gameplay.
 - [x] Enable and run GitHub Pages deployment for the existing repository.
 - [x] Verify the published start menu and solo arena on gjerdrum.vip (browser reports a recoverable hydration warning; multiplayer combat not verified).
-- [ ] Rename the game and remove the start-menu subtitle.
-- [ ] Replace the desert arena presentation with an offshore oil rig.
-- [ ] Verify gameplay and publish the changes to GitHub Pages.
+- [x] Rename the game and remove the start-menu subtitle.
+- [x] Replace the desert arena presentation with an offshore oil rig.
+- [x] Verify gameplay and publish the changes to GitHub Pages (live menu and arena checked; pre-existing recoverable hydration warning remains).

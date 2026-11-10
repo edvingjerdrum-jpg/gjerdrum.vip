@@ -76,7 +76,7 @@ export default function OilRig() {
   return <>
     <Ocean palette={p} />
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[MAP_SIZE, MAP_SIZE]} /><meshStandardMaterial map={deckTexture} metalness={0.55} roughness={0.7} /></mesh>
-    <mesh position={[0, -0.9, 0]}><boxGeometry args={[MAP_SIZE + 1, 1.8, MAP_SIZE + 1]} /><meshStandardMaterial color={p.red} metalness={0.5} /></mesh>
+    <mesh position={[0, -0.94, 0]}><boxGeometry args={[MAP_SIZE + 1, 1.8, MAP_SIZE + 1]} /><meshStandardMaterial color={p.red} metalness={0.5} /></mesh>
     {[-24, 24].flatMap((x) => [-24, 24].map((z) => <mesh key={`${x}:${z}`} position={[x, -7, z]}><cylinderGeometry args={[2, 2.5, 14, 12]} /><meshStandardMaterial color={p.yellow} metalness={0.6} /></mesh>))}
     {BOXES.map((b, i) => {
       const edge = Math.abs(b.x) === MAP_SIZE / 2 || Math.abs(b.z) === MAP_SIZE / 2;
